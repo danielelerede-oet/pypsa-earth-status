@@ -20,6 +20,35 @@ NA_VALUES = ["NULL", "", "N/A", "NAN", "NaN", "nan", "Nan", "n/a", "null"]
 REGIONS_CONFIG = "regions_definition_config.yaml"
 
 
+IRENA_TECHNOLOGY_MAPPING = {
+    "Solar photovoltaic": "solar",
+    "Solar thermal energy": "solar",
+    "Onshore wind energy": "onwind",
+    "Offshore wind energy": "offwind-dc",
+    "Renewable hydropower": "ror",
+    "Mixed Hydro Plants": "ror",
+    "Marine energy": "other",
+    "Solid biofuels": "biomass",
+    "Liquid biofuels": "biomass",
+    "Biogas": "biomass",
+    "Renewable municipal waste": "waste",
+    "Geothermal energy": "geothermal",
+    "Coal and peat": "coal",
+    "Oil": "oil",
+    "Natural gas": "CCGT",
+    "Fossil fuels n.e.s.": "oil",
+    "Nuclear": "nuclear",
+    "Other non-renewable energy": "other",
+}
+
+
+IRENA_GENERATION_EXCLUDED_TECHNOLOGIES = {
+    "total renewable",
+    "total non-renewable",
+    "pumped storage",
+}
+
+
 def handle_exception(exc_type, exc_value, exc_traceback):
     """
     Customize error tracebacks written through the workflow logger.

@@ -10,6 +10,7 @@ methodology: network_validation   # technique used in the validation:
 datasets:
   demand: ["ourworldindata"]  # list of datasets sources to use. A subset of 'ourworldindata'
   installed_capacity: ["irena"]  # list of datasets sources to use. A subset of 'irena'
+  electricity_generation: ["irena"] # list of datasets sources to use. A subset of 'irena'
   # energy_dispatch: []  # list of datasets sources to validate energy dispatch. Not yet supported
   # network: []  # list of datasets sources to validate networks. Not yet supported
 

@@ -57,6 +57,43 @@ def process_network_statistics(inputs, outputs):
     optimal_capacity.drop(columns="bus", inplace=True)
     to_csv_nafix(optimal_capacity, outputs["optimal_capacity"])
 
+    # Extract annual electricity generation
+    generation = (
+        network.generators_t.p.mul(
+            network.snapshot_weightings.generators,
+            axis=0,
+        )
+        .sum(axis=0)
+        .rename("generation")
+        .to_frame()
+    )
+
+    # Convert weighted MWh to GWh
+    generation["generation"] /= 1e3
+
+    generation["carrier"] = network.generators.loc[
+        generation.index,
+        "carrier",
+    ]
+    generation["bus"] = network.generators.loc[
+        generation.index,
+        "bus",
+    ]
+    generation["region"] = network.buses.loc[
+        generation["bus"],
+        "country",
+    ].to_numpy()
+
+    generation["carrier"] = harmonize_carrier_names(generation["carrier"])
+
+    generation = generation.reset_index(drop=True).groupby(["region", "carrier"]).sum()
+    generation.drop(columns="bus", inplace=True)
+
+    to_csv_nafix(
+        generation,
+        outputs["electricity_generation"],
+    )
+
 
 if __name__ == "__main__":
     if "snakemake" not in globals():

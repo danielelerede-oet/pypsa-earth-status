@@ -74,6 +74,57 @@ def compare_demand_statistics(reference_df, network_df):
     return comparison_df
 
 
+def compare_generation_statistics(
+    reference_df,
+    network_df,
+):
+    """
+    Compare annual electricity generation by region and carrier.
+    """
+    comparison_results = []
+
+    unique_combinations = reference_df[
+        [
+            "region",
+            "carrier",
+        ]
+    ].drop_duplicates()
+
+    for _, row in unique_combinations.iterrows():
+        region = row["region"]
+        carrier = row["carrier"]
+
+        reference_row = reference_df[
+            (reference_df["region"] == region) & (reference_df["carrier"] == carrier)
+        ]
+
+        network_row = network_df[
+            (network_df["region"] == region) & (network_df["carrier"] == carrier)
+        ]
+
+        if not reference_row.empty and not network_row.empty:
+            comparison_results.append(
+                {
+                    "region": region,
+                    "carrier": carrier,
+                    "network_generation": (network_row["generation"].iloc[0]),
+                    "reference_generation": (reference_row["generation"].iloc[0]),
+                }
+            )
+
+    comparison_df = pd.DataFrame(
+        comparison_results,
+        columns=[
+            "region",
+            "carrier",
+            "network_generation",
+            "reference_generation",
+        ],
+    )
+
+    return comparison_df.set_index("region")
+
+
 def compute_line_ratios_geojson(reference_path, model_path, output_path):
     """
     Compute the ratio of s_nom and length between model and reference networks,
@@ -135,10 +186,12 @@ def make_comparison(inputs, outputs):
         inputs["installed_capacity_reference"]
     )  # same source assumed
     df_reference_demand = read_csv_nafix(inputs["demand_reference"])
+    df_reference_generation = read_csv_nafix(inputs["electricity_generation_reference"])
 
     df_network_installed_capacity = read_csv_nafix(inputs["installed_capacity_network"])
     df_network_optimal_capacity = read_csv_nafix(inputs["optimal_capacity_network"])
     df_network_demand = read_csv_nafix(inputs["demand_network"])
+    df_network_generation = read_csv_nafix(inputs["electricity_generation_network"])
 
     installed_capacity_comparison = compare_capacity_statistics(
         df_reference_installed_capacity, df_network_installed_capacity
@@ -150,11 +203,20 @@ def make_comparison(inputs, outputs):
         df_reference_demand, df_network_demand
     )
 
+    electricity_generation_comparison = compare_generation_statistics(
+        df_reference_generation,
+        df_network_generation,
+    )
+
     to_csv_nafix(
         installed_capacity_comparison, outputs["installed_capacity_comparison"]
     )
     to_csv_nafix(optimal_capacity_comparison, outputs["optimal_capacity_comparison"])
     to_csv_nafix(demand_comparison, outputs["demand_comparison"])
+    to_csv_nafix(
+        electricity_generation_comparison,
+        outputs["electricity_generation_comparison"],
+    )
 
     compute_line_ratios_geojson(
         reference_path=inputs["network_geojson_reference"],

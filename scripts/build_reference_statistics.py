@@ -53,6 +53,25 @@ def process_reference_statistics(inputs, outputs, year, countries):
     df_capacity = df_capacity.groupby(["region", "carrier"]).sum()
     to_csv_nafix(df_capacity, outputs["installed_capacity"])
 
+    # Process electricity generation data
+    df_generation = read_csv_nafix(inputs["generation_irena"])
+    df_generation = filter_data_by_config(
+        df_generation,
+        "region",
+        countries,
+    )
+    df_generation = df_generation[df_generation["Year"] == year]
+    df_generation = df_generation.rename(columns={"Technology": "carrier"})
+    df_generation = df_generation[["region", "carrier", "generation"]].set_index(
+        "region"
+    )
+    df_generation["carrier"] = harmonize_carrier_names(df_generation["carrier"])
+    df_generation = df_generation.groupby(["region", "carrier"]).sum()
+    to_csv_nafix(
+        df_generation,
+        outputs["electricity_generation"],
+    )
+
 
 if __name__ == "__main__":
     if "snakemake" not in globals():
