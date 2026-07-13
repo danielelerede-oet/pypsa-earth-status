@@ -405,6 +405,7 @@ def harmonize_carrier_names(series):
             "ror": "hydro",
             "run of river": "hydro",
             "storage hydro": "hydro",
+            "phs": "hydro",
             "wind onshore": "onshore",
             "wind offshore": "offwind",
             "offwind-dc": "offwind",
