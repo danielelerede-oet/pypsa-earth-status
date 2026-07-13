@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 import sys
-from pathlib import Path
 
 sys.path.append("./scripts")
 
@@ -22,11 +21,7 @@ network_path = validation_config["network_path"]
 countries = validation_config["countries"]
 years = validation_config["year"]
 
-country_tag = "-".join(sorted(countries))
-year_tag = "-".join(str(year) for year in sorted(years))
-network_tag = Path(network_path).stem
-
-validation_id = f"{country_tag}_{year_tag}_{network_tag}"
+validation_id = validation_config["name"]
 
 
 reference_statistics_dir = f"resources/reference_statistics/{validation_id}"
