@@ -22,6 +22,8 @@ SPDX-License-Identifier: CC-BY-4.0
 
 ### Minor Changes and bug-fixing
 
+* [Make validation outputs configuration-specific to avoid stale results when switching validation settings PR #62](https://github.com/pypsa-meets-earth/pypsa-earth-status/pull/62)
+
 * [Link year and country parameters to `build_reference_statistics` rule PR #58](https://github.com/pypsa-meets-earth/pypsa-earth-status/pull/58)
 
 * [Add Read the Docs badge to README.md PR #35](https://github.com/pypsa-meets-earth/pypsa-earth-status/pull/35)
