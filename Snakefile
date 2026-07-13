@@ -63,8 +63,8 @@ rule build_reference_installed_capacity_irena:
 rule build_network_geojson:
     input:
         buscodes="data/electricity_transmission/Input - Center points.csv",
-        lineexist=("data/electricity_transmission/" "GTD-v1.1_regional_existing.csv"),
-        lineplan=("data/electricity_transmission/" "GTD-v1.1_regional_planned.csv"),
+        lineexist="data/electricity_transmission/GTD-v1.1_regional_existing.csv",
+        lineplan="data/electricity_transmission/GTD-v1.1_regional_planned.csv",
         network_path=network_path,
     output:
         network_existing=(f"{reference_statistics_dir}/network_exist.geojson"),
