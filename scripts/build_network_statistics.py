@@ -98,10 +98,18 @@ def process_network_statistics(inputs, outputs):
         outputs["optimal_capacity"],
     )
 
-    # Extract annual electricity generation
-    generation = (
-        network.generators_t.p.mul(
-            network.snapshot_weightings.generators,
+    # Extract annual electricity generation from generators
+    generator_generation = (
+        network.generators_t.p.reindex(
+            index=network.snapshots,
+            columns=network.generators.index,
+            fill_value=0.0,
+        )
+        .clip(lower=0.0)
+        .mul(
+            network.snapshot_weightings.generators.reindex(
+                network.snapshots
+            ),
             axis=0,
         )
         .sum(axis=0)
@@ -109,17 +117,56 @@ def process_network_statistics(inputs, outputs):
         .to_frame()
     )
 
+    generator_generation["carrier"] = network.generators.loc[
+        generator_generation.index,
+        "carrier",
+    ].to_numpy()
+
+    generator_generation["bus"] = network.generators.loc[
+        generator_generation.index,
+        "bus",
+    ].to_numpy()
+
+    # Extract annual positive discharge from storage units
+    storage_generation = (
+        network.storage_units_t.p.reindex(
+            index=network.snapshots,
+            columns=network.storage_units.index,
+            fill_value=0.0,
+        )
+        .clip(lower=0.0)
+        .mul(
+            network.snapshot_weightings.generators.reindex(
+                network.snapshots
+            ),
+            axis=0,
+        )
+        .sum(axis=0)
+        .rename("generation")
+        .to_frame()
+    )
+
+    storage_generation["carrier"] = network.storage_units.loc[
+        storage_generation.index,
+        "carrier",
+    ].to_numpy()
+
+    storage_generation["bus"] = network.storage_units.loc[
+        storage_generation.index,
+        "bus",
+    ].to_numpy()
+
+    generation = pd.concat(
+        [
+            generator_generation,
+            storage_generation,
+        ],
+        ignore_index=True,
+    )
+
     # Convert weighted MWh to GWh
     generation["generation"] /= 1e3
 
-    generation["carrier"] = network.generators.loc[
-        generation.index,
-        "carrier",
-    ]
-    generation["bus"] = network.generators.loc[
-        generation.index,
-        "bus",
-    ]
     generation["region"] = network.buses.loc[
         generation["bus"],
         "country",
