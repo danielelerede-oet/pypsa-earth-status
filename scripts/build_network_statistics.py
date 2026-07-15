@@ -107,9 +107,7 @@ def process_network_statistics(inputs, outputs):
         )
         .clip(lower=0.0)
         .mul(
-            network.snapshot_weightings.generators.reindex(
-                network.snapshots
-            ),
+            network.snapshot_weightings.generators.reindex(network.snapshots),
             axis=0,
         )
         .sum(axis=0)
@@ -136,9 +134,7 @@ def process_network_statistics(inputs, outputs):
         )
         .clip(lower=0.0)
         .mul(
-            network.snapshot_weightings.generators.reindex(
-                network.snapshots
-            ),
+            network.snapshot_weightings.generators.reindex(network.snapshots),
             axis=0,
         )
         .sum(axis=0)
