@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
+import os
 import sys
 
 sys.path.append("./scripts")
@@ -21,13 +22,18 @@ network_path = validation_config["network_path"]
 countries = validation_config["countries"]
 years = validation_config["year"]
 
-validation_id = validation_config["name"]
+validation_name = validation_config["name"]
 
+reference_statistics_dir = "resources/reference_statistics"
+network_statistics_dir = "resources/network_statistics"
+results_dir = "results"
+logs_dir = "logs"
 
-reference_statistics_dir = f"resources/reference_statistics/{validation_id}"
-network_statistics_dir = f"resources/network_statistics/{validation_id}"
-results_dir = f"results/{validation_id}"
-logs_dir = f"logs/{validation_id}"
+if validation_name:
+    reference_statistics_dir += f"/{validation_name}"
+    network_statistics_dir += f"/{validation_name}"
+    results_dir += f"/{validation_name}"
+    logs_dir += f"/{validation_name}"
 
 
 rule clean:
