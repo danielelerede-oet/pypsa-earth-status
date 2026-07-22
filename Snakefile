@@ -73,9 +73,9 @@ rule build_network_geojson:
         lineplan="data/electricity_transmission/GTD-v1.1_regional_planned.csv",
         network_path=network_path,
     output:
-        network_existing=(f"{reference_statistics_dir}/network_exist.geojson"),
-        network_planned=(f"{reference_statistics_dir}/network_planned.geojson"),
-        network_model=(f"{network_statistics_dir}/network_model.geojson"),
+        network_existing=f"{reference_statistics_dir}/network_exist.geojson",
+        network_planned=f"{reference_statistics_dir}/network_planned.geojson",
+        network_model=f"{network_statistics_dir}/network_model.geojson",
     log:
         f"{logs_dir}/build_network_geojson.log",
     params:
@@ -94,7 +94,7 @@ rule build_reference_statistics:
         cap_irena="resources/clean/irena_capacity_data.csv",
     output:
         demand=f"{reference_statistics_dir}/demand.csv",
-        installed_capacity=(f"{reference_statistics_dir}/installed_capacity.csv"),
+        installed_capacity=f"{reference_statistics_dir}/installed_capacity.csv",
     log:
         f"{logs_dir}/build_reference_statistics.log",
     params:
@@ -110,8 +110,8 @@ rule build_network_statistics:
         network_path=network_path,
     output:
         demand=f"{network_statistics_dir}/demand.csv",
-        installed_capacity=(f"{network_statistics_dir}/installed_capacity.csv"),
-        optimal_capacity=(f"{network_statistics_dir}/optimal_capacity.csv"),
+        installed_capacity=f"{network_statistics_dir}/installed_capacity.csv",
+        optimal_capacity=f"{network_statistics_dir}/optimal_capacity.csv",
     log:
         f"{logs_dir}/build_network_statistics.log",
     params:
@@ -130,19 +130,19 @@ rule build_network_statistics:
 rule make_comparison:
     input:
         demand_network=f"{network_statistics_dir}/demand.csv",
-        installed_capacity_network=(f"{network_statistics_dir}/installed_capacity.csv"),
-        optimal_capacity_network=(f"{network_statistics_dir}/optimal_capacity.csv"),
-        network_geojson_network=(f"{network_statistics_dir}/network_model.geojson"),
+        installed_capacity_network=f"{network_statistics_dir}/installed_capacity.csv",
+        optimal_capacity_network=f"{network_statistics_dir}/optimal_capacity.csv",
+        network_geojson_network=f"{network_statistics_dir}/network_model.geojson",
         demand_reference=f"{reference_statistics_dir}/demand.csv",
         installed_capacity_reference=(
             f"{reference_statistics_dir}/installed_capacity.csv"
         ),
-        network_geojson_reference=(f"{reference_statistics_dir}/network_exist.geojson"),
+        network_geojson_reference=f"{reference_statistics_dir}/network_exist.geojson",
     output:
         demand_comparison=f"{results_dir}/tables/demand.csv",
-        installed_capacity_comparison=(f"{results_dir}/tables/installed_capacity.csv"),
-        optimal_capacity_comparison=(f"{results_dir}/tables/optimal_capacity.csv"),
-        network_comparison_geojson=(f"{results_dir}/network_comparison.geojson"),
+        installed_capacity_comparison=f"{results_dir}/tables/installed_capacity.csv",
+        optimal_capacity_comparison=f"{results_dir}/tables/optimal_capacity.csv",
+        network_comparison_geojson=f"{results_dir}/network_comparison.geojson",
     log:
         f"{logs_dir}/make_comparison.log",
     script:
@@ -152,8 +152,8 @@ rule make_comparison:
 rule visualize_data:
     input:
         demand_comparison=f"{results_dir}/tables/demand.csv",
-        installed_capacity_comparison=(f"{results_dir}/tables/installed_capacity.csv"),
-        optimal_capacity_comparison=(f"{results_dir}/tables/optimal_capacity.csv"),
+        installed_capacity_comparison=f"{results_dir}/tables/installed_capacity.csv",
+        optimal_capacity_comparison=f"{results_dir}/tables/optimal_capacity.csv",
         osm_lines=os.path.join(
             config["plot_osm_grid_network"]["grid_path"],
             "all_clean_lines.geojson",
@@ -163,14 +163,14 @@ rule visualize_data:
             "all_clean_substations.geojson",
         ),
     output:
-        plot_demand=(f"{results_dir}/figures/demand_comparison.png"),
+        plot_demand=f"{results_dir}/figures/demand_comparison.png",
         plot_installed_capacity=(
             f"{results_dir}/figures/" "installed_capacity_comparison.png"
         ),
-        plot_capacity_mix=(f"{results_dir}/figures/capacity_mix_comparison.png"),
-        plot_capacity_grid=(f"{results_dir}/figures/capacity_grid_comparison.png"),
-        plot_grid_network=(f"{results_dir}/figures/grid_network.png"),
-        line_length_by_voltage=(f"{results_dir}/tables/line_length_by_voltage.csv"),
+        plot_capacity_mix=f"{results_dir}/figures/capacity_mix_comparison.png",
+        plot_capacity_grid=f"{results_dir}/figures/capacity_grid_comparison.png",
+        plot_grid_network=f"{results_dir}/figures/grid_network.png",
+        line_length_by_voltage=f"{results_dir}/tables/line_length_by_voltage.csv",
     log:
         f"{logs_dir}/visualize_data.log",
     params:
