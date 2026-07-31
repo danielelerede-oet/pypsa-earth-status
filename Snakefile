@@ -66,6 +66,27 @@ rule build_reference_installed_capacity_irena:
         "scripts/build_reference_installed_capacity_irena.py"
 
 
+rule retrieve_reference_generation_irena:
+    output:
+        generation_irena=("data/electricity_generation/C-ELECGEN_20260713-113435.csv"),
+    log:
+        "logs/retrieve_reference_generation_irena.log",
+    params:
+        url=(
+            "https://raw.githubusercontent.com/"
+            "pypsa-meets-earth/temporary_storage/main/"
+            "datasets/C-ELECGEN_20260713-113435.csv"
+        ),
+    shell:
+        """
+        mkdir -p "$(dirname {output.generation_irena})"
+        curl --fail --location --retry 3 \
+            "{params.url}" \
+            --output "{output.generation_irena}" \
+            2>"{log}"
+        """
+
+
 rule build_reference_generation_irena:
     input:
         generation_irena=(
@@ -130,7 +151,7 @@ rule build_network_statistics:
         demand=f"{network_statistics_dir}/demand.csv",
         installed_capacity=f"{network_statistics_dir}/installed_capacity.csv",
         optimal_capacity=f"{network_statistics_dir}/optimal_capacity.csv",
-        electricity_generation=(f"{network_statistics_dir}/electricity_generation.csv"),
+        electricity_generation=f"{network_statistics_dir}/electricity_generation.csv",
     log:
         f"{logs_dir}/build_network_statistics.log",
     params:
