@@ -113,6 +113,14 @@ rule build_reference_statistics:
         electricity_generation=(
             f"{reference_statistics_dir}/electricity_generation.csv"
         ),
+    log:
+        f"{logs_dir}/build_reference_statistics.log",
+    params:
+        datasets=config["datasets"],
+        year=years,
+        countries=countries,
+    script:
+        "scripts/build_reference_statistics.py"
 
 
 rule build_network_statistics:
@@ -122,9 +130,20 @@ rule build_network_statistics:
         demand=f"{network_statistics_dir}/demand.csv",
         installed_capacity=f"{network_statistics_dir}/installed_capacity.csv",
         optimal_capacity=f"{network_statistics_dir}/optimal_capacity.csv",
-        electricity_generation=(
-            f"{network_statistics_dir}/electricity_generation.csv"
-        ),
+        electricity_generation=(f"{network_statistics_dir}/electricity_generation.csv"),
+    log:
+        f"{logs_dir}/build_network_statistics.log",
+    params:
+        network_path=network_path,
+        year=years,
+        countries=countries,
+        shapefile=validation_config["shapefile"],
+        validate_cross_border_capacity=validation_config[
+            "validate_cross_border_capacity"
+        ],
+        network=validation_config,
+    script:
+        "scripts/build_network_statistics.py"
 
 
 rule make_comparison:
@@ -152,6 +171,10 @@ rule make_comparison:
             f"{results_dir}/tables/electricity_generation.csv"
         ),
         network_comparison_geojson=f"{results_dir}/network_comparison.geojson",
+    log:
+        f"{logs_dir}/make_comparison.log",
+    script:
+        "scripts/make_comparison.py"
 
 
 rule visualize_data:
@@ -163,6 +186,13 @@ rule visualize_data:
             f"{results_dir}/tables/electricity_generation.csv"
         ),
         osm_lines=os.path.join(
+            config["plot_osm_grid_network"]["grid_path"],
+            "all_clean_lines.geojson",
+        ),
+        osm_substations=os.path.join(
+            config["plot_osm_grid_network"]["grid_path"],
+            "all_clean_substations.geojson",
+        ),
     output:
         plot_demand=f"{results_dir}/figures/demand_comparison.png",
         plot_installed_capacity=(
@@ -175,6 +205,14 @@ rule visualize_data:
         plot_capacity_grid=f"{results_dir}/figures/capacity_grid_comparison.png",
         plot_grid_network=f"{results_dir}/figures/grid_network.png",
         line_length_by_voltage=f"{results_dir}/tables/line_length_by_voltage.csv",
+    log:
+        f"{logs_dir}/visualize_data.log",
+    params:
+        line_voltages=config["plot_osm_grid_network"]["line_voltages"],
+        voltage_colors=config["plot_osm_grid_network"]["voltage_colors"],
+        plot_circuits=config["plot_osm_grid_network"]["plot_circuits"],
+    script:
+        "scripts/visualize_data.py"
 
 
 rule create_example_DE:
