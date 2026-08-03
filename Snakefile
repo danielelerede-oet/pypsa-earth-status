@@ -16,6 +16,10 @@ from helpers import create_country_list
 configfile: "config.yaml"
 
 
+storage HTTP:
+    provider="http",
+
+
 validation_config = config["network_validation"]
 
 network_path = validation_config["network_path"]
@@ -67,34 +71,31 @@ rule build_reference_installed_capacity_irena:
 
 
 rule retrieve_reference_generation_irena:
-    output:
-        generation_irena=("data/electricity_generation/C-ELECGEN_20260713-113435.csv"),
-    log:
-        "logs/retrieve_reference_generation_irena.log",
-    params:
-        url=(
+    input:
+        generation_irena=storage.HTTP(
             "https://raw.githubusercontent.com/"
             "pypsa-meets-earth/temporary_storage/main/"
             "datasets/C-ELECGEN_20260713-113435.csv"
         ),
-    shell:
-        """
-        mkdir -p "$(dirname {output.generation_irena})"
-        curl --fail --location --retry 3 \
-            "{params.url}" \
-            --output "{output.generation_irena}" \
-            2>"{log}"
-        """
+    output:
+        generation_irena="data/electricity_generation/C-ELECGEN_20260713-113435.csv",
+    run:
+        os.makedirs(
+            os.path.dirname(output.generation_irena),
+            exist_ok=True,
+        )
+        copyfile(
+            input.generation_irena,
+            output.generation_irena,
+        )
 
 
 rule build_reference_generation_irena:
     input:
-        generation_irena=(
-            "data/electricity_generation/" "C-ELECGEN_20260713-113435.csv"
-        ),
         # Source: https://pxweb.irena.org/pxweb/en/IRENASTAT/IRENASTAT__Power%20Capacity%20and%20Generation/Country_ELECGEN_2025_H2_v-PX%201.px/
+        generation_irena="data/electricity_generation/C-ELECGEN_20260713-113435.csv",
     output:
-        generation_irena=("resources/clean/" "irena_generation_data.csv"),
+        generation_irena="resources/clean/irena_generation_data.csv",
     log:
         "logs/build_reference_generation_irena.log",
     script:
