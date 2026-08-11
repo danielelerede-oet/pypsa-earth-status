@@ -104,15 +104,14 @@ def process_network_statistics(inputs, outputs):
         network.loads["bus"].isin(electricity_buses)
     ]
 
-    demand = (
-        network.loads_t.p_set.reindex(
-            index=network.snapshots,
-            columns=electricity_loads,
-            fill_value=0.0,
-        ).mean()
-        * 8760
-        * 1e-6
+    load_p_set = network.get_switchable_as_dense("Load", "p_set").reindex(
+        index=network.snapshots,
+        columns=electricity_loads,
     )
+
+    weights = network.snapshot_weightings.generators.reindex(network.snapshots)
+
+    demand = load_p_set.mul(weights, axis=0).sum(axis=0).mul(1e-6)
 
     demand = demand.rename("demand").to_frame()
 
