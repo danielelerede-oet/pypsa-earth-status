@@ -178,6 +178,38 @@ def compute_line_ratios_geojson(reference_path, model_path, output_path):
         json.dump(geojson_model, f)
 
 
+def align_network_regions(reference_df, network_df, value_column, group_columns=None):
+    group_columns = group_columns or []
+
+    reference_regions = reference_df["region"].dropna().unique()
+    network_regions = network_df["region"].dropna().unique()
+
+    if len(reference_regions) != 1:
+        return network_df
+
+    reference_region = reference_regions[0]
+
+    if set(reference_regions) == set(network_regions):
+        return network_df
+
+    logging.info(
+        "Aggregating %d network regions to reference region '%s'.",
+        len(network_regions),
+        reference_region,
+    )
+
+    if group_columns:
+        aggregated = network_df.groupby(group_columns, as_index=False)[
+            value_column
+        ].sum()
+    else:
+        aggregated = pd.DataFrame({value_column: [network_df[value_column].sum()]})
+
+    aggregated["region"] = reference_region
+
+    return aggregated[["region", *group_columns, value_column]]
+
+
 def make_comparison(inputs, outputs):
     df_reference_installed_capacity = read_csv_nafix(
         inputs["installed_capacity_reference"]
@@ -192,6 +224,33 @@ def make_comparison(inputs, outputs):
     df_network_optimal_capacity = read_csv_nafix(inputs["optimal_capacity_network"])
     df_network_demand = read_csv_nafix(inputs["demand_network"])
     df_network_generation = read_csv_nafix(inputs["electricity_generation_network"])
+
+    df_network_installed_capacity = align_network_regions(
+        df_reference_installed_capacity,
+        df_network_installed_capacity,
+        value_column="p_nom",
+        group_columns=["carrier"],
+    )
+
+    df_network_optimal_capacity = align_network_regions(
+        df_reference_optimal_capacity,
+        df_network_optimal_capacity,
+        value_column="p_nom",
+        group_columns=["carrier"],
+    )
+
+    df_network_demand = align_network_regions(
+        df_reference_demand,
+        df_network_demand,
+        value_column="demand",
+    )
+
+    df_network_generation = align_network_regions(
+        df_reference_generation,
+        df_network_generation,
+        value_column="generation",
+        group_columns=["carrier"],
+    )
 
     installed_capacity_comparison = compare_capacity_statistics(
         df_reference_installed_capacity, df_network_installed_capacity
