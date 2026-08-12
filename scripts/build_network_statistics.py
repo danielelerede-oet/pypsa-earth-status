@@ -15,7 +15,11 @@ import pypsa
 from helpers import configure_logging, harmonize_carrier_names, to_csv_nafix
 
 ELECTRICITY_BUS_CARRIERS = {"ac", "low voltage"}
-CO2_BUS_CARRIERS = {"co2", "co2 atmosphere"}
+# CO2_BUS_CARRIERS = {"co2", "co2 atmosphere"}
+NON_GENERATION_LINK_CARRIERS = {
+    "battery discharger",
+    "home battery discharger",
+}
 
 
 def get_electricity_buses(network):
@@ -26,53 +30,88 @@ def get_electricity_buses(network):
 
 def get_electricity_production_links(network):
     """
-    Return links representing electricity generation in the sector-coupled network.
+    Return links converting a non-electric energy carrier into electricity.
 
-    Conventional generators converted by PyPSA-Earth `scripts: prepare_sector_network.py` use:
-    bus0: fuel
-    bus1: electricity
-    bus2 or later: CO2
+    Links whose input and output buses both carry electricity are excluded
+    because they represent transmission, conversion, or distribution rather
+    than primary electricity generation.
 
-    CHP links also produce electricity on bus1. CHP without an explicit CO2
-    port is identified from its carrier.
+    Storage dischargers are excluded because their output is previously stored
+    electricity and should not be counted as primary generation.
     """
     if network.links.empty:
         return network.links.index[:0]
 
     electricity_buses = get_electricity_buses(network)
+
+    bus0_is_electric = network.links["bus0"].isin(electricity_buses)
     bus1_is_electric = network.links["bus1"].isin(electricity_buses)
 
-    has_co2_output = pd.Series(False, index=network.links.index)
-
-    for column in network.links.columns:
-        if not re.fullmatch(r"bus(?:[2-9]|[1-9][0-9]+)", column):
-            continue
-
-        output_bus_carriers = (
-            network.links[column]
-            .map(network.buses.carrier)
-            .fillna("")
-            .str.strip()
-            .str.lower()
-        )
-        has_co2_output |= output_bus_carriers.isin(CO2_BUS_CARRIERS)
-
-    is_chp = network.links.carrier.fillna("").str.contains(
-        r"\bCHP\b", case=False, regex=True
+    normalized_carriers = (
+        network.links["carrier"].fillna("").astype(str).str.strip().str.casefold()
     )
 
-    return network.links.index[bus1_is_electric & (has_co2_output | is_chp)]
+    is_storage_discharge = normalized_carriers.isin(NON_GENERATION_LINK_CARRIERS)
+
+    return network.links.index[
+        bus1_is_electric & ~bus0_is_electric & ~is_storage_discharge
+    ]
+
+
+def harmonize_electricity_carrier_names(carriers):
+    """
+    Harmonize electricity-producing technologies while keeping rooftop and
+    utility-scale solar as separate categories.
+    """
+    original = carriers.fillna("").astype(str)
+    normalized = original.str.strip().str.casefold()
+
+    result = original.copy()
+
+    is_biomass = normalized.str.contains("biomass", regex=False)
+    result.loc[is_biomass] = "biomass"
+
+    is_chp = normalized.str.contains("chp", regex=False)
+
+    result.loc[is_chp & normalized.str.contains("coal", regex=False)] = "coal"
+
+    result.loc[is_chp & normalized.str.contains("oil", regex=False)] = "oil"
+
+    result.loc[is_chp & normalized.str.contains("gas", regex=False)] = "gas"
+
+    result = harmonize_carrier_names(result)
+
+    # Apply this after general harmonization to prevent rooftop PV from being
+    # merged with utility-scale PV.
+    is_rooftop_solar = normalized.str.contains(
+        "solar", regex=False
+    ) & normalized.str.contains("rooftop", regex=False)
+    result.loc[is_rooftop_solar] = "solar rooftop"
+
+    return result
 
 
 def get_link_capacity(network, capacity_column):
-    """Return electrical output capacity of generation links."""
+    """Return electrical output capacity of electricity-producing links."""
+    production_links = get_electricity_production_links(network)
+
     links = network.links.loc[
-        get_electricity_production_links(network),
+        production_links,
         ["carrier", capacity_column, "efficiency", "bus1"],
     ].copy()
 
     if links.empty:
         return pd.DataFrame(columns=["carrier", "p_nom", "bus"])
+
+    links[capacity_column] = pd.to_numeric(
+        links[capacity_column],
+        errors="coerce",
+    ).fillna(0.0)
+
+    links["efficiency"] = pd.to_numeric(
+        links["efficiency"],
+        errors="coerce",
+    ).fillna(1.0)
 
     links["p_nom"] = links[capacity_column] * links["efficiency"]
 
@@ -149,7 +188,7 @@ def process_network_statistics(inputs, outputs):
         network.buses["country"]
     )
 
-    installed_capacity["carrier"] = harmonize_carrier_names(
+    installed_capacity["carrier"] = harmonize_electricity_carrier_names(
         installed_capacity["carrier"]
     )
 
@@ -197,7 +236,9 @@ def process_network_statistics(inputs, outputs):
 
     optimal_capacity["region"] = optimal_capacity["bus"].map(network.buses["country"])
 
-    optimal_capacity["carrier"] = harmonize_carrier_names(optimal_capacity["carrier"])
+    optimal_capacity["carrier"] = harmonize_electricity_carrier_names(
+        optimal_capacity["carrier"]
+    )
 
     optimal_capacity = optimal_capacity.groupby(["region", "carrier"])[["p_nom"]].sum()
 
@@ -303,15 +344,14 @@ def process_network_statistics(inputs, outputs):
     # Convert weighted MWh to GWh
     generation["generation"] /= 1e3
 
-    generation["region"] = network.buses.loc[
-        generation["bus"],
-        "country",
-    ].to_numpy()
+    generation["region"] = generation["bus"].map(network.buses["country"])
 
-    generation["carrier"] = harmonize_carrier_names(generation["carrier"])
+    generation["carrier"] = harmonize_electricity_carrier_names(generation["carrier"])
 
-    generation = generation.reset_index(drop=True).groupby(["region", "carrier"]).sum()
-    generation.drop(columns="bus", inplace=True)
+    generation = generation.groupby(
+        ["region", "carrier"],
+        as_index=True,
+    )[["generation"]].sum()
 
     to_csv_nafix(
         generation,
