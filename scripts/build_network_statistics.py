@@ -14,11 +14,22 @@ import pandas as pd
 import pypsa
 from helpers import configure_logging, harmonize_carrier_names, to_csv_nafix
 
-ELECTRICITY_BUS_CARRIERS = {"ac", "low voltage"}
+ELECTRICITY_BUS_CARRIERS = {
+    "ac",
+    "low voltage",
+    "dc",
+}
 # CO2_BUS_CARRIERS = {"co2", "co2 atmosphere"}
 NON_GENERATION_LINK_CARRIERS = {
     "battery discharger",
     "home battery discharger",
+    "b2b",
+}
+NON_GENERATION_GENERATOR_CARRIERS = {
+    "load shedding",
+}
+NON_GENERATION_STORAGE_UNIT_CARRIERS = {
+    "phs",
 }
 
 
@@ -79,7 +90,21 @@ def harmonize_electricity_carrier_names(carriers):
 
     result.loc[is_chp & normalized.str.contains("gas", regex=False)] = "gas"
 
+    # Project-specific comparison convention; this is not a direct mapping to the
+    # IRENA "Other renewable energy" category.
+    is_hydrogen_generation = normalized.str.contains(
+        r"\bh2\b",
+        regex=True,
+        na=False,
+    )
+    result.loc[is_hydrogen_generation] = "non-bio renewable fuels"
+
     result = harmonize_carrier_names(result)
+
+    # Keep waste separate from biomass because reference statistics provide a
+    # dedicated waste category.
+    is_waste = normalized.str.contains("waste", regex=False, na=False)
+    result.loc[is_waste] = "waste"
 
     # Apply this after general harmonization to prevent rooftop PV from being
     # merged with utility-scale PV.
@@ -131,12 +156,34 @@ def process_network_statistics(inputs, outputs):
     # Extract electricity demand
     electricity_buses = get_electricity_buses(network)
 
+    generator_carriers = (
+        network.generators["carrier"].fillna("").astype(str).str.strip().str.casefold()
+    )
+
+    # Exclude artificial generators from both capacity and generation statistics.
     electricity_generators = network.generators.index[
         network.generators["bus"].isin(electricity_buses)
+        & ~generator_carriers.isin(NON_GENERATION_GENERATOR_CARRIERS)
     ]
+
+    storage_unit_carriers = (
+        network.storage_units["carrier"]
+        .fillna("")
+        .astype(str)
+        .str.strip()
+        .str.casefold()
+    )
 
     electricity_storage_units = network.storage_units.index[
         network.storage_units["bus"].isin(electricity_buses)
+    ]
+
+    # Pumped storage is excluded from generation because it is not primary
+    # electricity generation.
+    generation_storage_units = electricity_storage_units[
+        ~storage_unit_carriers.loc[electricity_storage_units].isin(
+            NON_GENERATION_STORAGE_UNIT_CARRIERS
+        )
     ]
 
     electricity_loads = network.loads.index[
@@ -278,7 +325,7 @@ def process_network_statistics(inputs, outputs):
     storage_generation = (
         network.storage_units_t.p.reindex(
             index=network.snapshots,
-            columns=electricity_storage_units,
+            columns=generation_storage_units,
             fill_value=0.0,
         )
         .clip(lower=0.0)
